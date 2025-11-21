@@ -1,4 +1,4 @@
-# `CHRONO_CRUNCH`
+# `CRONOCRUNCH`
 
 A neo-brutalist, shareable (via URL carrying a handful of configuration payloads), high-precision temporal progress tracker featuring cyberpunk aesthetics and hard-style animations. Visualize the passage of time with millisecond precision in a raw, industrial interface.
 

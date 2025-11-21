@@ -231,7 +231,7 @@ export default function App() {
       {/* Footer */}
       <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-zinc-800 p-2 z-30">
         <div className="container mx-auto flex justify-between items-center font-mono text-[10px] text-zinc-600 uppercase">
-             <span>CHRONO_CRUNCH_V1.0.6</span>
+             <span>chronocrunch</span>
              <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Reality is loading...</span>
         </div>
       </footer>
