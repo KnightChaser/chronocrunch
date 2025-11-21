@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TimeConfig } from '../types';
 import { Button } from './Button';
-import { Settings, Crosshair, Activity, Type } from 'lucide-react';
+import { Settings, Crosshair, Activity, Type, Share2, Check } from 'lucide-react';
 
 interface ConfigPanelProps {
   config: TimeConfig;
@@ -11,6 +11,7 @@ interface ConfigPanelProps {
 }
 
 export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onChange, isOpen, toggleOpen }) => {
+  const [copied, setCopied] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -18,6 +19,16 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onChange, isOp
       ...config,
       [name]: name === 'precision' ? parseInt(value, 10) : value,
     });
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const setPreset = (type: 'minute' | 'hour' | 'day' | 'year') => {
@@ -136,10 +147,16 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onChange, isOp
             </div>
           </div>
 
-          <Button onClick={toggleOpen} className="w-full flex justify-center items-center gap-2">
-            <Activity className="w-5 h-5" /> 
-            ENGAGE TRACKING
-          </Button>
+          <div className="flex gap-4">
+            <Button onClick={handleShare} variant="outline" className="flex-1 flex justify-center items-center gap-2">
+              {copied ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
+              {copied ? "COPIED!" : "SHARE"}
+            </Button>
+            <Button onClick={toggleOpen} className="flex-[2] flex justify-center items-center gap-2">
+              <Activity className="w-5 h-5" /> 
+              ENGAGE TRACKING
+            </Button>
+          </div>
         </div>
         
         {/* Decorative corner */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ConfigPanel } from './components/ConfigPanel';
 import { ProgressBar } from './components/ProgressBar';
 import { Ticker } from './components/Ticker';
@@ -9,10 +9,61 @@ import { TimeConfig } from './types';
 import { formatDuration } from './utils/progressUtils';
 import { AlertTriangle, Zap } from 'lucide-react';
 
+const getInitialConfig = (): { config: TimeConfig, isOpen: boolean } => {
+  if (typeof window === 'undefined') return { config: INITIAL_CONFIG, isOpen: false };
+
+  const params = new URLSearchParams(window.location.search);
+  
+  // If no params, return default
+  if (!window.location.search) {
+    return { config: INITIAL_CONFIG, isOpen: false };
+  }
+
+  const title = params.get('title');
+  const start = params.get('start');
+  const end = params.get('end');
+  const precision = params.get('precision');
+
+  if (title && start && end && precision) {
+     const startDate = new Date(start);
+     const endDate = new Date(end);
+     const prec = parseInt(precision, 10);
+
+     // Basic validation
+     if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && !isNaN(prec)) {
+         return {
+             config: {
+                 title,
+                 startTime: start,
+                 endTime: end,
+                 precision: prec
+             },
+             isOpen: false
+         };
+     }
+  }
+
+  // If we have params but they are invalid/incomplete
+  return { config: INITIAL_CONFIG, isOpen: true };
+};
+
 export default function App() {
-  const [config, setConfig] = useState<TimeConfig>(INITIAL_CONFIG);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const initial = getInitialConfig();
+  const [config, setConfig] = useState<TimeConfig>(initial.config);
+  const [isConfigOpen, setIsConfigOpen] = useState(initial.isOpen);
   const { progress, status, now } = useProgress(config);
+
+  // Update URL when config changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('title', config.title);
+    params.set('start', config.startTime);
+    params.set('end', config.endTime);
+    params.set('precision', config.precision.toString());
+    
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [config]);
 
   // Derived state for times
   const startTimeMs = new Date(config.startTime).getTime();
