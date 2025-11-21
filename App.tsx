@@ -16,15 +16,23 @@ const calculateProgress = (start: number, end: number) => {
   return { percent: (elapsed / total) * 100, status: 'ACTIVE' };
 };
 
-// Helper format time remaining
+// Helper format time remaining with Years support
 const formatDuration = (ms: number) => {
   if (ms <= 0) return "00:00:00";
+  
   const seconds = Math.floor((ms / 1000) % 60);
   const minutes = Math.floor((ms / (1000 * 60)) % 60);
   const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  const totalDays = Math.floor(ms / (1000 * 60 * 60 * 24));
+  
+  const years = Math.floor(totalDays / 365);
+  const days = totalDays % 365;
   
   const pad = (n: number) => n.toString().padStart(2, '0');
+  
+  if (years > 0) {
+      return `${years}y ${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  }
   return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
 };
 
@@ -59,16 +67,23 @@ export default function App() {
   // Derived state for times
   const startTimeMs = new Date(config.startTime).getTime();
   const endTimeMs = new Date(config.endTime).getTime();
-  const totalDuration = endTimeMs - startTimeMs;
   const remainingMs = endTimeMs - now;
   const elapsedMs = now - startTimeMs;
 
-  // Dynamic sizing logic
-  // Base chars = 3 (e.g. "100") + 1 (.) + precision
-  const estimatedCharCount = 4 + config.precision;
-  // Scale vw inversely to character count to ensure containment within viewport width
-  // 70vw is a safe usable width, divided by char count gives vw per char
-  const dynamicFontSizeVw = Math.min(12, 75 / estimatedCharCount); 
+  // Dynamic sizing logic for the main number
+  // We estimate characters: 3 digits + 1 dot + precision
+  const estimatedCharCount = 3 + (config.precision > 0 ? 1 + config.precision : 0);
+  
+  // Calculate a clamped VW/REM size. 
+  // The constant (e.g., 85) is a heuristic for "how much width one char takes" relative to container
+  // We use `cqw` (container query width) conceptually by limiting max width, but here we just use clamp with viewport units
+  // adjusted for the fixed container max-width (1024px approx).
+  const fontSizeBase = 15; // Base size in rem
+  
+  // Determine font size: larger precision = smaller font.
+  // We clamp it so it doesn't get microscopic or infinitely huge.
+  // Logic: Start big, subtract size for every extra decimal.
+  const calculatedSize = Math.max(2, fontSizeBase - (estimatedCharCount * 0.55));
 
   return (
     <div className="min-h-screen w-full relative text-white font-sans selection:bg-acid selection:text-black overflow-x-hidden">
@@ -106,10 +121,10 @@ export default function App() {
         </div>
 
         {/* Centerpiece */}
-        <div className="w-full mx-auto">
+        <div className="w-full mx-auto flex flex-col items-center">
           
-          {/* Title Block */}
-          <div className="mb-8 flex flex-col md:flex-row justify-between items-end gap-4 max-w-5xl mx-auto">
+          {/* Title & Info Header - Fixed Max Width */}
+          <div className="w-full max-w-5xl mb-8 flex flex-col md:flex-row justify-between items-end gap-4">
             <div>
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.8] tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-500 drop-shadow-[0_5px_0_rgba(0,0,0,1)] break-words">
                     {config.title.split('\n').map((line, i) => (
@@ -120,25 +135,21 @@ export default function App() {
                     ))}
                 </h1>
             </div>
-            <div className="bg-black border-2 border-zinc-800 p-4 flex gap-6 font-mono text-sm text-zinc-400 shadow-hard-rev">
+            <div className="bg-black border-2 border-zinc-800 p-4 flex gap-6 font-mono text-sm text-zinc-400 shadow-hard-rev shrink-0">
                 <div>
                     <span className="block text-[10px] text-zinc-600 uppercase">Start Sequence</span>
-                    <span className="text-white">{new Date(config.startTime).toLocaleString()}</span>
+                    <span className="text-white">{new Date(config.startTime).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
                 </div>
                 <div className="w-[1px] bg-zinc-800"></div>
                 <div>
                     <span className="block text-[10px] text-zinc-600 uppercase">Target Sequence</span>
-                    <span className="text-white">{new Date(config.endTime).toLocaleString()}</span>
+                    <span className="text-white">{new Date(config.endTime).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
                 </div>
             </div>
           </div>
 
-          {/* Main Display Box - Responsive Width Container */}
-          {/* 
-             Updated to w-fit mx-auto to hug content.
-             Added min-w to ensure it doesn't look too thin on short numbers.
-          */}
-          <div className="bg-black border-4 border-white p-6 md:p-12 relative shadow-[12px_12px_0px_0px_#ccff00] w-fit min-w-[320px] max-w-full mx-auto transition-all duration-300">
+          {/* Main Display Box - Fixed Width matching Header */}
+          <div className="w-full max-w-5xl bg-black border-4 border-white p-6 md:p-12 relative shadow-[12px_12px_0px_0px_#ccff00] transition-all duration-300">
             
             {/* Corner Decorations */}
             <div className="absolute top-0 left-0 w-8 h-8 border-r-4 border-b-4 border-white bg-acid"></div>
@@ -147,33 +158,39 @@ export default function App() {
             <div className="absolute bottom-0 right-0 w-8 h-8 border-l-4 border-t-4 border-white bg-neon-pink"></div>
 
             {/* Big Percent */}
-            <div className="flex flex-col items-center justify-center py-8">
+            <div className="flex flex-col items-center justify-center py-8 w-full overflow-hidden">
                <div className="text-acid font-mono text-lg md:text-xl mb-2 uppercase tracking-[0.2em] flex items-center gap-2">
                  <Zap className="w-5 h-5 animate-bounce" /> 
                  Percent_Complete
                </div>
                
-               <div className="relative">
-                  {/* 
-                    Dynamic font size applied here. 
-                    Using style prop to directly manipulate based on precision calculations 
-                  */}
-                  <h2 
-                    className="leading-none font-black tracking-tighter text-white select-all transition-all duration-300"
-                    style={{ fontSize: `${dynamicFontSizeVw}vw` }}
-                  >
-                    <Ticker value={progress} precision={config.precision} />
-                    <span className="text-[0.4em] text-zinc-600 ml-2 align-top">%</span>
-                  </h2>
+               <div className="relative w-full text-center flex justify-center items-baseline">
                   
-                  {/* Glitch Copy underneath */}
-                  <h2 
-                    className="leading-none font-black tracking-tighter text-neon-pink absolute top-0 left-0 opacity-30 mix-blend-screen blur-[2px] animate-pulse select-none pointer-events-none translate-x-[2px] transition-all duration-300"
-                    style={{ fontSize: `${dynamicFontSizeVw}vw` }}
-                  >
-                     <Ticker value={progress} precision={config.precision} />
-                     <span className="text-[0.4em] text-zinc-600 ml-2 align-top">%</span>
-                  </h2>
+                  {/* Container for Number + Shadow ensuring they move together */}
+                  <div className="relative group">
+                      {/* Main Text (White) */}
+                      <h2 
+                        className="leading-none font-black tracking-tighter text-white select-all transition-all duration-300 whitespace-nowrap relative z-10"
+                        style={{ fontSize: `min(18vw, ${calculatedSize}rem)` }}
+                      >
+                        <Ticker value={progress} precision={config.precision} />
+                      </h2>
+
+                      {/* Glitch/Shadow Text (Pink) - Locked to parent container with slight offset */}
+                      <h2 
+                        className="leading-none font-black tracking-tighter text-neon-pink absolute top-0 left-0 opacity-50 mix-blend-screen blur-[1px] select-none pointer-events-none whitespace-nowrap z-0"
+                        style={{ 
+                           fontSize: `min(18vw, ${calculatedSize}rem)`,
+                           transform: 'translate(0.04em, 0.03em)' 
+                        }}
+                      >
+                         <Ticker value={progress} precision={config.precision} />
+                      </h2>
+                  </div>
+
+                  {/* Percent symbol aligned to baseline/bottom */}
+                  <span className="text-[3vw] md:text-[2rem] text-zinc-600 ml-1 md:ml-4 font-bold self-end mb-2 md:mb-4">%</span>
+                  
                </div>
             </div>
 
@@ -181,8 +198,8 @@ export default function App() {
 
           </div>
 
-          {/* Secondary Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 max-w-5xl mx-auto">
+          {/* Secondary Metrics - Matching Width */}
+          <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
              
              <MetricCard 
                 label="Time Remaining"
@@ -212,7 +229,7 @@ export default function App() {
       
       <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-zinc-800 p-2 z-30">
         <div className="container mx-auto flex justify-between items-center font-mono text-[10px] text-zinc-600 uppercase">
-             <span>CHRONO_CRUNCH_V1.0.5</span>
+             <span>CHRONO_CRUNCH_V1.0.6</span>
              <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Reality is loading...</span>
         </div>
       </footer>
@@ -220,10 +237,18 @@ export default function App() {
   );
 }
 
-// Helper Component for small cards
-const MetricCard = ({ label, value, color, textColor }: { label: string, value: string, color: string, textColor: string }) => (
-  <div className={`bg-zinc-950 border-2 ${color} p-4 shadow-[4px_4px_0px_0px_#222] hover:translate-y-[-2px] transition-transform`}>
-    <div className="text-zinc-500 font-mono text-xs uppercase mb-1 tracking-widest border-b border-zinc-800 pb-1">{label}</div>
-    <div className={`text-2xl md:text-3xl font-bold ${textColor} truncate font-mono`}>{value}</div>
-  </div>
-);
+// Helper Component for small cards with dynamic font sizing logic
+const MetricCard = ({ label, value, color, textColor }: { label: string, value: string, color: string, textColor: string }) => {
+  // Simple heuristic: if value is very long, use smaller text
+  const isLongText = value.length > 12;
+  const isVeryLongText = value.length > 20;
+
+  return (
+    <div className={`bg-zinc-950 border-2 ${color} p-4 shadow-[4px_4px_0px_0px_#222] hover:translate-y-[-2px] transition-transform`}>
+      <div className="text-zinc-500 font-mono text-xs uppercase mb-1 tracking-widest border-b border-zinc-800 pb-1">{label}</div>
+      <div className={`font-bold ${textColor} font-mono leading-tight ${isVeryLongText ? 'text-lg' : isLongText ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl'}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
