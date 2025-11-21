@@ -1,68 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { ConfigPanel } from './components/ConfigPanel';
 import { ProgressBar } from './components/ProgressBar';
 import { Ticker } from './components/Ticker';
+import { MetricCard } from './components/MetricCard';
+import { useProgress } from './hooks/useProgress';
 import { INITIAL_CONFIG } from './constants';
 import { TimeConfig } from './types';
+import { formatDuration } from './utils/progressUtils';
 import { AlertTriangle, Zap } from 'lucide-react';
-
-// Helper to calculate progress
-const calculateProgress = (start: number, end: number) => {
-  const now = Date.now();
-  if (now < start) return { percent: 0, status: 'PENDING' };
-  if (now > end) return { percent: 100, status: 'COMPLETE' };
-  const total = end - start;
-  const elapsed = now - start;
-  return { percent: (elapsed / total) * 100, status: 'ACTIVE' };
-};
-
-// Helper format time remaining with Years support
-const formatDuration = (ms: number) => {
-  if (ms <= 0) return "00:00:00";
-  
-  const seconds = Math.floor((ms / 1000) % 60);
-  const minutes = Math.floor((ms / (1000 * 60)) % 60);
-  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-  const totalDays = Math.floor(ms / (1000 * 60 * 60 * 24));
-  
-  const years = Math.floor(totalDays / 365);
-  const days = totalDays % 365;
-  
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  
-  if (years > 0) {
-      return `${years}y ${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-  }
-  return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-};
 
 export default function App() {
   const [config, setConfig] = useState<TimeConfig>(INITIAL_CONFIG);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<string>('PENDING');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const requestRef = useRef<number | null>(null);
-  const [now, setNow] = useState(Date.now());
-
-  // Animation Loop
-  const animate = () => {
-    const start = new Date(config.startTime).getTime();
-    const end = new Date(config.endTime).getTime();
-    const result = calculateProgress(start, end);
-    
-    setProgress(result.percent);
-    setStatus(result.status);
-    setNow(Date.now());
-    
-    requestRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    requestRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [config]);
+  const { progress, status, now } = useProgress(config);
 
   // Derived state for times
   const startTimeMs = new Date(config.startTime).getTime();
@@ -157,7 +107,7 @@ export default function App() {
             <div className="absolute bottom-0 left-0 w-8 h-8 border-r-4 border-t-4 border-white"></div>
             <div className="absolute bottom-0 right-0 w-8 h-8 border-l-4 border-t-4 border-white bg-neon-pink"></div>
 
-            {/* Big Percent */}
+            {/* Big Percent Display */}
             <div className="flex flex-col items-center justify-center py-8 w-full overflow-hidden">
                <div className="text-acid font-mono text-lg md:text-xl mb-2 uppercase tracking-[0.2em] flex items-center gap-2">
                  <Zap className="w-5 h-5 animate-bounce" /> 
@@ -227,28 +177,13 @@ export default function App() {
         </div>
       </main>
       
+      {/* Footer */}
       <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-zinc-800 p-2 z-30">
         <div className="container mx-auto flex justify-between items-center font-mono text-[10px] text-zinc-600 uppercase">
              <span>CHRONO_CRUNCH_V1.0.6</span>
              <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Reality is loading...</span>
         </div>
       </footer>
-    </div>
-  );
-}
-
-// Helper Component for small cards with dynamic font sizing logic
-const MetricCard = ({ label, value, color, textColor }: { label: string, value: string, color: string, textColor: string }) => {
-  // Simple heuristic: if value is very long, use smaller text
-  const isLongText = value.length > 12;
-  const isVeryLongText = value.length > 20;
-
-  return (
-    <div className={`bg-zinc-950 border-2 ${color} p-4 shadow-[4px_4px_0px_0px_#222] hover:translate-y-[-2px] transition-transform`}>
-      <div className="text-zinc-500 font-mono text-xs uppercase mb-1 tracking-widest border-b border-zinc-800 pb-1">{label}</div>
-      <div className={`font-bold ${textColor} font-mono leading-tight ${isVeryLongText ? 'text-lg' : isLongText ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl'}`}>
-        {value}
-      </div>
     </div>
   );
 }
