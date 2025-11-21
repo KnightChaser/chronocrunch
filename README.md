@@ -2,6 +2,8 @@
 
 A neo-brutalist, shareable (via URL carrying a handful of configuration payloads), high-precision temporal progress tracker featuring cyberpunk aesthetics and hard-style animations. Visualize the passage of time with millisecond precision in a raw, industrial interface.
 
+[![Deploy Vite app to GitHub Pages](https://github.com/KnightChaser/chronocrunch/actions/workflows/deploy.yml/badge.svg)](https://github.com/KnightChaser/chronocrunch/actions/workflows/deploy.yml)
+
 ![Main Interface](assets/pictures/chronocrunch_example_1.png)
 ![Configuration Panel](assets/pictures/chronocrunch_example_2.png)
 
