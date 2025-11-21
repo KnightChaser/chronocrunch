@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: '/chrono-crunch/', // For GitHub Pages configuration
+    base: '/chronocrunch/', // For GitHub Pages configuration
     server: {
       port: 3000,
       host: '0.0.0.0',
